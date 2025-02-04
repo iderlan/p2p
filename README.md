@@ -14,6 +14,9 @@ Este projeto implementa um sistema de chat peer-to-peer (P2P) utilizando **WebRT
   - Apenas mensagens podem ser trocadas entre clientes.
   - Até o momento não é possível conectar clientes de diferentes redes
   - Mas para teste, várias abas abertas podem se comunicar em localhost na mesma máquina
+  - A página não possui estilo css, nem design responsivo
+  -- Imagem da página html sem css.
+  ---![image](https://github.com/user-attachments/assets/6ccecf3a-d74c-42f9-88e8-48d117c61995)
 ---
 
 ## 🛠 Instalação e Configuração (Windows)
