@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat P2P WebRTC</title>
+</head>
+<body>
+    <h2>Chat P2P</h2>
+    <p>Seu ID: <span id="myId">Gerando...</span></p>
+    <input type="text" id="targetId" placeholder="Digite o ID do outro cliente">
+    <button onclick="connectToPeer()">Conectar</button>
+
+    <div id="connectionRequest" style="display:none; border:1px solid black; padding:10px;">
+        <p id="requestText"></p>
+        <button onclick="acceptConnection()">Permitir</button>
+    </div>
+
+    <div id="chat" style="border:1px solid black; height:200px; overflow-y:scroll;"></div>
+    <input type="text" id="mensagem" placeholder="Digite sua mensagem">
+    <button onclick="sendMessage()">Enviar</button>
+
+    <script>
+        let socket = new WebSocket("ws://localhost:12345");
+        let myId;
+        let peerConnection;
+        let dataChannel;
+        let pendingOffer, pendingFrom;
+
+        let config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+        socket.onmessage = function(event) {
+            let data = JSON.parse(event.data);
+
+            if (data.type === "id") {
+                myId = data.id;
+                document.getElementById("myId").innerText = myId;
+            } 
+            else if (data.type === "offer") {
+                pendingOffer = data.offer;
+                pendingFrom = data.from;
+                document.getElementById("requestText").innerText = `O dispositivo ${pendingFrom} deseja se conectar. Permitir?`;
+                document.getElementById("connectionRequest").style.display = "block";
+            } 
+            else if (data.type === "answer") {
+                peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+            } 
+            else if (data.type === "candidate") {
+                peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+            }
+        };
+
+        function connectToPeer() {
+            let targetId = document.getElementById("targetId").value;
+            if (!targetId) {
+                alert("Digite um ID para conectar!");
+                return;
+            }
+
+            peerConnection = new RTCPeerConnection(config);
+            dataChannel = peerConnection.createDataChannel("chat");
+            setupDataChannel();
+
+            setupConnection(targetId);
+            
+            peerConnection.createOffer().then(offer => {
+                peerConnection.setLocalDescription(offer);
+                socket.send(JSON.stringify({ type: "connect", target: targetId, offer: offer, from: myId }));
+            });
+        }
+
+        function acceptConnection() {
+            document.getElementById("connectionRequest").style.display = "none";
+
+            peerConnection = new RTCPeerConnection(config);
+            setupConnection(pendingFrom);
+
+            peerConnection.ondatachannel = event => {
+                dataChannel = event.channel;
+                setupDataChannel();
+            };
+
+            peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer));
+            peerConnection.createAnswer().then(answer => {
+                peerConnection.setLocalDescription(answer);
+                socket.send(JSON.stringify({ type: "answer", target: pendingFrom, answer: answer, from: myId }));
+            });
+        }
+
+        function setupConnection(targetId) {
+            peerConnection.onicecandidate = event => {
+                if (event.candidate) {
+                    socket.send(JSON.stringify({ type: "candidate", target: targetId, candidate: event.candidate, from: myId }));
+                }
+            };
+        }
+
+        function setupDataChannel() {
+            dataChannel.onopen = () => console.log("Canal de dados aberto!");
+            dataChannel.onmessage = event => {
+                let chat = document.getElementById("chat");
+                let mensagem = document.createElement("p");
+                mensagem.textContent = "Outro: " + event.data;
+                chat.appendChild(mensagem);
+            };
+        }
+
+        function sendMessage() {
+            let msg = document.getElementById("mensagem").value;
+            if (dataChannel && dataChannel.readyState === "open") {
+                dataChannel.send(msg);
+                let chat = document.getElementById("chat");
+                let mensagem = document.createElement("p");
+                mensagem.textContent = "Você: " + msg;
+                chat.appendChild(mensagem);
+            } else {
+                alert("A conexão P2P não está estabelecida!");
+            }
+        }
+    </script>
+</body>
+</html>
