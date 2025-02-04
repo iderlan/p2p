@@ -10,12 +10,18 @@ Este projeto implementa um sistema de chat peer-to-peer (P2P) utilizando **WebRT
   - Encaminhar as mensagens de oferta, resposta e candidatos ICE entre os clientes para facilitar a negociação do WebRTC.
 
 - **Cliente Web (index.html):**  
-  Uma interface simples em HTML, CSS e JavaScript que:
+  Uma interface simples em HTML e JavaScript que:
   - Se conecta ao servidor de sinalização para obter um ID.
   - Permite que o usuário insira o ID de outro cliente para iniciar uma conexão.
   - Exibe notificações para aceitação de conexões.
   - Estabelece uma conexão WebRTC para a troca de mensagens via canal de dados (dataChannel).
 
+## Instalação e Configuração
+  1. Baixar os arquivos (server.php) e (index.html) e colocá-los na pasta 
+  1. Instalação das Dependências do Servidor
+     No diretório 
+     composer require cboden/ratchet
+  3. 
 ## Funcionalidades
 
 - **Geração de ID Único:** Ao acessar a página, o cliente recebe um ID único gerado pelo servidor.
@@ -26,23 +32,15 @@ Este projeto implementa um sistema de chat peer-to-peer (P2P) utilizando **WebRT
 
 ## Tecnologias Utilizadas
 
-- **Frontend:** HTML, CSS, JavaScript, WebRTC
+- **Frontend:** HTML, JavaScript, WebRTC
 - **Backend:** PHP, Ratchet (para WebSocket)
 - **Ferramentas Auxiliares:**  
   - [Composer](https://getcomposer.org/) para gerenciamento de dependências PHP.
-  - Opcionalmente, [ngrok](https://ngrok.com/) para expor o servidor localmente a um domínio público.
 
 ## Pré-requisitos
 
-- PHP 7.2 ou superior
+- PHP 8.1 ou superior
 - Composer
 - Navegador moderno (Chrome, Firefox, Edge, etc.) com suporte a WebRTC e WebSocket
 - Caso deseje expor o serviço publicamente, é necessário configurar encaminhamento de portas ou usar um serviço como ngrok.
 
-## Instalação e Configuração
-
-### 1. Clonando o Repositório
-
-```bash
-git clone https://github.com/seu-usuario/seu-repositorio.git
-cd seu-repositorio
