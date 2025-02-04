@@ -1,6 +1,6 @@
-# Chat P2P com WebRTC e WebSocket
+# Comunicação P2P com WebRTC e WebSocket
 
-Este projeto implementa um sistema de chat peer-to-peer (P2P) utilizando **WebRTC** para a comunicação direta entre navegadores e **WebSocket** para a sinalização. A ideia é que dois usuários possam se conectar diretamente, trocando mensagens sem que o tráfego precise passar continuamente pelo servidor, o que reduz a latência e aumenta a privacidade.
+Este projeto implementa um sistema de chat peer-to-peer (P2P) utilizando **WebRTC** para a comunicação direta entre navegadores e **WebSocket** para a sinalização. A ideia é que dois usuários possam se conectar diretamente, trocando arquivos sem que o tráfego precise passar continuamente pelo servidor, o que reduz a latência e aumenta a privacidade.
 
 ---
 
@@ -9,8 +9,11 @@ Este projeto implementa um sistema de chat peer-to-peer (P2P) utilizando **WebRT
 - **Servidor de Sinalização (`server.php`)**
   - Utiliza PHP e a biblioteca [Ratchet](http://socketo.me/) para criar um servidor WebSocket.
   - Responsável por gerar um **ID único** para cada cliente.
-  - Encaminha mensagens de **oferta, resposta e candidatos ICE** entre os clientes para facilitar a negociação WebRTC.
-
+  - Encaminha arquivos de **oferta, resposta e candidatos ICE** entre os clientes para facilitar a negociação WebRTC.
+- **Versão 1.1** ⚠️
+  - Apenas mensagens podem ser trocadas entre clientes.
+  - Até o momento não é possível conectar clientes de diferentes redes
+  - Mas para teste, várias abas abertas podem se comunicar em localhost na mesma máquina
 ---
 
 ## 🛠 Instalação e Configuração (Windows)
@@ -75,7 +78,7 @@ Se ainda não tiver o **Composer**, baixe e instale através do link: [Download 
    ```
 2. Abra duas abas diferentes do navegador para simular dois clientes distintos.
 
-### 3️⃣ Testando a Troca de Mensagens
+### 3️⃣ Testando a Troca de arquivos
 
 1. Cada aba terá um **ID único**, distribuído pelo servidor.
 2. Para conectar os clientes:
@@ -93,7 +96,7 @@ Se ainda não tiver o **Composer**, baixe e instale através do link: [Download 
 ✅ **Sinalização via WebSocket:** Comunicação inicial para a troca de credenciais WebRTC.
 ✅ **Conexão P2P com WebRTC:** Após a sinalização, os clientes estabelecem uma conexão direta.
 ✅ **Notificações de Conexão:** O cliente receptor recebe uma solicitação e pode aceitar ou rejeitar.
-✅ **Interface Simples e Responsiva:** Um chat básico para envio e recebimento de mensagens em tempo real.
+✅ **Interface Simples e Responsiva:** Um chat básico para envio e recebimento de arquivos em tempo real.
 
 ---
 
