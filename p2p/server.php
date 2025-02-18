@@ -38,6 +38,12 @@ class SignalingServer implements MessageComponentInterface {
             $target = $this->clients[$data["target"]];
             $target->send(json_encode(["type" => "candidate", "candidate" => $data["candidate"], "from" => $data["from"]]));
         }
+
+        // Envia metadados do arquivo (nome e tamanho)
+        if ($data["type"] == "fileMetadata" && isset($this->clients[$data["target"]])) {
+            $target = $this->clients[$data["target"]];
+            $target->send(json_encode(["type" => "fileMetadata", "metadata" => $data["metadata"], "from" => $data["from"]]));
+        }
     }
 
     public function onClose(ConnectionInterface $conn) {
