@@ -45,7 +45,8 @@ Este projeto implementa um sistema de chat peer-to-peer (P2P) utilizando **WebRT
      ```
    - Salve o arquivo e reinicie o **servidor Apache** no XAMPP.
 
-### 2️⃣ Instalação das Dependências do Servidor
+
+### 2️⃣ Instalação das Dependências do Servidor (Windows)
 
 Se ainda não tiver o **Composer**, baixe e instale através do link: [Download Composer](https://getcomposer.org/)
 
@@ -59,12 +60,31 @@ Se ainda não tiver o **Composer**, baixe e instale através do link: [Download 
    ```
 
 ---
+### 2️⃣ Instalação das Dependências do Servidor (Linux)
+
+dentro da pasta p2p abra o terminal
+1. instale o php:
+   ```sh
+   sudo apt update
+   sudo apt install php php-cli php-common php-xml php-curl php-zip
+   ```
+3. instalar o composer
+   ```sh
+   sudo apt install curl php-cli php-mbstring git unzip
+   curl -sS https://getcomposer.org/installer | php
+   sudo mv composer.phar /usr/local/bin/composer
+   ```
+4. verificar se foi tudo devidamente instalado
+   ```sh
+   composer --version
+   ```
+---
 
 ## 🚀 Testando a Conexão
 
 ### 1️⃣ Executando o Servidor
 
-1. No CMD, dentro da pasta `p2p`, inicie o servidor WebSocket:
+1. No CMD, ou no terminal linux dentro da pasta `p2p`, inicie o servidor WebSocket:
    ```sh
    php server.php
    ```
@@ -76,6 +96,9 @@ Se ainda não tiver o **Composer**, baixe e instale através do link: [Download 
 ### 2️⃣ Executando o Cliente
 
 1. Abra um navegador e digite:
+   ```sh
+   http://localhost/p2p/
+1. ou aperte para abrir o arquivo index.html no navegador:
    ```sh
    http://localhost/p2p/
    ```
