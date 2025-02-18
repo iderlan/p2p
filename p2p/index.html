@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat P2P WebRTC</title>
+    <title>Transferência de Arquivo P2P</title>
 </head>
 <body>
-    <h2>Chat P2P</h2>
+    <h2>Transferência de Arquivo P2P</h2>
     <p>Seu ID: <span id="myId">Gerando...</span></p>
     <input type="text" id="targetId" placeholder="Digite o ID do outro cliente">
     <button onclick="connectToPeer()">Conectar</button>
+    <input type="file" id="fileInput" />
+    <button id = "enviar" onclick="sendFile()">Enviar Arquivo</button>
 
     <div id="connectionRequest" style="display:none; border:1px solid black; padding:10px;">
         <p id="requestText"></p>
@@ -17,15 +19,17 @@
     </div>
 
     <div id="chat" style="border:1px solid black; height:200px; overflow-y:scroll;"></div>
-    <input type="text" id="mensagem" placeholder="Digite sua mensagem">
-    <button onclick="sendMessage()">Enviar</button>
 
     <script>
         let socket = new WebSocket("ws://localhost:12345");
         let myId;
+        let name = "";
+        let targetId;
         let peerConnection;
         let dataChannel;
         let pendingOffer, pendingFrom;
+        let fileReader = new FileReader();
+        let fileData = [];
 
         let config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
@@ -48,17 +52,26 @@
             else if (data.type === "candidate") {
                 peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
             }
+            else if (data.type === "fileMetadata") {
+            	if(name != data.metadata.name){
+                	alert("conexão estabelecida para: " + data.metadata.name + " (" + data.metadata.size + " bytes)");
+                }else{
+                	alert("Recebendo arquivo: " + data.metadata.name + " (" + data.metadata.size + " bytes)");
+                }
+                name = data.metadata.name;
+                receiveFile(data.metadata);
+            }
         };
 
         function connectToPeer() {
-            let targetId = document.getElementById("targetId").value;
+            targetId = document.getElementById("targetId").value;
             if (!targetId) {
                 alert("Digite um ID para conectar!");
                 return;
             }
 
             peerConnection = new RTCPeerConnection(config);
-            dataChannel = peerConnection.createDataChannel("chat");
+            dataChannel = peerConnection.createDataChannel("fileTransfer");
             setupDataChannel();
 
             setupConnection(targetId);
@@ -98,25 +111,79 @@
         function setupDataChannel() {
             dataChannel.onopen = () => console.log("Canal de dados aberto!");
             dataChannel.onmessage = event => {
-                let chat = document.getElementById("chat");
-                let mensagem = document.createElement("p");
-                mensagem.textContent = "Outro: " + event.data;
-                chat.appendChild(mensagem);
+                if (event.data instanceof Blob) {
+                    // Quando o arquivo for recebido, inicia o download automaticamente
+                    downloadFile(event.data);
+                } else {
+                    let chat = document.getElementById("chat");
+                    let mensagem = document.createElement("p");
+                    mensagem.textContent = "Outro: " + event.data;
+                    chat.appendChild(mensagem);
+                }
             };
         }
 
-        function sendMessage() {
-            let msg = document.getElementById("mensagem").value;
-            if (dataChannel && dataChannel.readyState === "open") {
-                dataChannel.send(msg);
-                let chat = document.getElementById("chat");
-                let mensagem = document.createElement("p");
-                mensagem.textContent = "Você: " + msg;
-                chat.appendChild(mensagem);
-            } else {
-                alert("A conexão P2P não está estabelecida!");
+        function sendFile() {
+            let file = document.getElementById("fileInput").files[0];
+            if (!file) {
+                alert("Selecione um arquivo para enviar!");
+                return;
+            }
+
+            // Envia metadados do arquivo (nome e tamanho)
+            let metadata = { name: file.name, size: file.size };
+            socket.send(JSON.stringify({ type: "fileMetadata", target: targetId, from: myId, metadata: metadata }));
+
+            // Lê o arquivo e envia em partes
+            fileReader.onload = function(e) {
+                dataChannel.send(e.target.result);
+            };
+
+            let chunkSize = 16 * 1024; // 16 KB
+            let offset = 0;
+            while (offset < file.size) {
+                let slice = file.slice(offset, offset + chunkSize);
+                fileReader.readAsArrayBuffer(slice);
+                offset += chunkSize;
             }
         }
+
+        function receiveFile(metadata) {
+    	    console.log("Iniciando recebimento de arquivo:", metadata.name); // Log para verificar o nome do arquivo
+    let receivedChunks = [];
+    let receivedSize = 0;
+
+    dataChannel.onmessage = function(event) {
+        if (event.data instanceof Blob) {
+            receivedChunks.push(event.data);
+            receivedSize += event.data.size;
+
+            // Quando o arquivo completo for recebido, dispara o download
+            if (receivedSize === metadata.size) {
+                let blob = new Blob(receivedChunks);
+                downloadFile(blob, metadata.name); // Passar o nome do arquivo aqui
+            }
+        }
+    };
+}
+
+function downloadFile(blob, fileName) {
+    console.log("Iniciando download do arquivo:", fileName); // Log para verificar o nome do arquivo
+    if (fileName) {  // Verifique se o nome foi realmente passado
+        let url = window.URL.createObjectURL(blob);
+        let a = document.createElement("a");
+        a.style.display = "none";
+        a.href = url;
+        a.download = fileName; // Usa o nome correto do arquivo recebido
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    } else {
+        console.error("Nome do arquivo não foi definido.");
+    }
+}
+
+
     </script>
 </body>
 </html>
