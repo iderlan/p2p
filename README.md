@@ -78,6 +78,10 @@ dentro da pasta p2p abra o terminal
    ```sh
    composer --version
    ```
+5. Instale as dependências necessárias:
+   ```sh
+   composer require cboden/ratchet
+   ```
 ---
 
 ## 🚀 Testando a Conexão
