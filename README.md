@@ -10,8 +10,8 @@ Este projeto implementa um sistema de chat peer-to-peer (P2P) utilizando **WebRT
   - Utiliza PHP e a biblioteca [Ratchet](http://socketo.me/) para criar um servidor WebSocket.
   - Responsável por gerar um **ID único** para cada cliente.
   - Encaminha arquivos de **oferta, resposta e candidatos ICE** entre os clientes para facilitar a negociação WebRTC.
-- **Versão 1.1** ⚠️
-  - Apenas mensagens podem ser trocadas entre clientes.
+- **Versão 1.2** ⚠️
+  - Arquivos podem ser enviados.
   - Até o momento não é possível conectar clientes de diferentes redes
   - Mas para teste, várias abas abertas podem se comunicar em localhost na mesma máquina
   - A página não possui estilo css, nem design responsivo
