@@ -1,189 +1,412 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transferência de Arquivo P2P</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transferência de Arquivo P2P</title>
+  <!-- Importando fonte Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <style>
+    /* Reset e configurações básicas */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: #f4f4f9;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .container {
+      flex: 1;
+      max-width: 800px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      padding: 10px;
+      color: white;
+      background: #24a0ed;
+    }
+    p, label {
+      font-size: 1rem;
+    }
+    input[type="text"],
+    input[type="file"] {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      transition: border-color 0.3s;
+    }
+    input[type="text"]:focus,
+    input[type="file"]:focus {
+      border-color: #66afe9;
+      outline: none;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 4px;
+      background: #24a0ed;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+    button:hover {
+      background: #4cae4c;
+    }
+    button:active {
+      transform: scale(0.98);
+    }
+    /* Seção de usuários conectados */
+    #userSection {
+      margin-top: 20px;
+      border-top: 1px solid #eee;
+      padding-top: 10px;
+    }
+    #userSection h3 {
+      margin-bottom: 10px;
+    }
+    #userList {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #userList li {
+      background: #e7e7e7;
+      margin: 5px 0;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.3s;
+    }
+    #userList li:hover {
+      background: #d7d7d7;
+      transform: scale(1.02);
+    }
+    /* Animação para a mudança do ID */
+    #myId {
+      font-weight: bold;
+      display: inline-block;
+      transition: opacity 0.5s;
+    }
+    .fade {
+      opacity: 0;
+      animation: fadeIn 0.5s forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    /* Rodapé */
+    footer {
+      background: #333;
+      color: #fff;
+      text-align: center;
+      padding: 15px;
+    }
+    /* Responsividade */
+    @media (max-width: 600px) {
+      .container {
+        margin: 10px;
+        padding: 15px;
+      }
+      button, input[type="text"], input[type="file"] {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
 </head>
 <body>
-    <h2>Transferência de Arquivo P2P</h2>
+   <h1>Transferência de Arquivo P2P</h1>
+
+  <div class="container">
+    
     <p>Seu ID: <span id="myId">Gerando...</span></p>
-    <input type="text" id="targetId" placeholder="Digite o ID do outro cliente">
-    <button onclick="connectToPeer()">Conectar</button>
-    <input type="file" id="fileInput" />
-    <button id = "enviar" onclick="sendFile()">Enviar Arquivo</button>
-
-    <div id="connectionRequest" style="display:none; border:1px solid black; padding:10px;">
-        <p id="requestText"></p>
-        <button onclick="acceptConnection()">Permitir</button>
+    
+    <!-- Área para alterar o ID -->
+    <div>
+      <input type="text" id="newId" placeholder="Digite seu novo ID">
+      <button onclick="changeId()">Alterar ID</button>
     </div>
+    
+    <!-- Ao digitar o ID do destinatário, a conexão é iniciada automaticamente -->
+    <input type="text" id="targetId" placeholder="Digite o ID do outro cliente" onchange="autoConnect()">
+    
+    <!-- Seleciona o arquivo e envia -->
+    <input type="file" id="fileInput" />
+    <button onclick="sendFile()">Enviar Arquivo</button>
+    
+    <!-- Lista de usuários conectados -->
+    <div id="userSection">
+      <h3>Usuários Conectados</h3>
+      <ul id="userList"></ul>
+    </div>
+  </div>
+  
+  <footer>
+    <p>&copy; 2025 Transferência de Arquivo P2P. Todos os direitos reservados.</p>
+  </footer>
 
-    <div id="chat" style="border:1px solid black; height:200px; overflow-y:scroll;"></div>
+  <script>
+    let socket = new WebSocket("ws://localhost:12345");
+    let myId;
+    let peerConnection;
+    let dataChannel;
+    let pendingOffer, pendingFrom;
+    let fileReader = new FileReader();
+    let config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
-    <script>
-        let socket = new WebSocket("ws://localhost:12345");
-        let myId;
-        let name = "";
-        let targetId;
-        let peerConnection;
-        let dataChannel;
-        let pendingOffer, pendingFrom;
-        let fileReader = new FileReader();
-        let fileData = [];
+    // Variáveis para gerenciar a recepção do arquivo
+    let fileReception = null;
+    let pendingFileChunks = [];
 
-        let config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+    socket.onmessage = function(event) {
+      let data = JSON.parse(event.data);
 
-        socket.onmessage = function(event) {
-            let data = JSON.parse(event.data);
-
-            if (data.type === "id") {
-                myId = data.id;
-                document.getElementById("myId").innerText = myId;
-            } 
-            else if (data.type === "offer") {
-                pendingOffer = data.offer;
-                pendingFrom = data.from;
-                document.getElementById("requestText").innerText = `O dispositivo ${pendingFrom} deseja se conectar. Permitir?`;
-                document.getElementById("connectionRequest").style.display = "block";
-            } 
-            else if (data.type === "answer") {
-                peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-            } 
-            else if (data.type === "candidate") {
-                peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-            }
-            else if (data.type === "fileMetadata") {
-            	if(name != data.metadata.name){
-                	alert("conexão estabelecida para: " + data.metadata.name + " (" + data.metadata.size + " bytes)");
-                }else{
-                	alert("Recebendo arquivo: " + data.metadata.name + " (" + data.metadata.size + " bytes)");
-                }
-                name = data.metadata.name;
-                receiveFile(data.metadata);
-            }
+      if (data.type === "id") {
+        myId = data.id;
+        document.getElementById("myId").innerText = myId;
+      } 
+      else if (data.type === "idChanged") {
+        myId = data.newId;
+        document.getElementById("myId").innerText = myId;
+        alert("ID alterado para: " + myId);
+      }
+      else if (data.type === "error") {
+        alert("Erro: " + data.message);
+      }
+      else if (data.type === "offer") {
+        pendingOffer = data.offer;
+        pendingFrom = data.from;
+        acceptConnection();
+      } 
+      else if (data.type === "answer") {
+        peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+      } 
+      else if (data.type === "candidate") {
+        peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+      }
+      else if (data.type === "fileMetadata") {
+        fileReception = {
+          metadata: data.metadata,
+          chunks: pendingFileChunks.slice(),
+          receivedSize: pendingFileChunks.reduce((total, blob) => total + blob.size, 0)
         };
-
-        function connectToPeer() {
-            targetId = document.getElementById("targetId").value;
-            if (!targetId) {
-                alert("Digite um ID para conectar!");
-                return;
-            }
-
-            peerConnection = new RTCPeerConnection(config);
-            dataChannel = peerConnection.createDataChannel("fileTransfer");
-            setupDataChannel();
-
-            setupConnection(targetId);
-            
-            peerConnection.createOffer().then(offer => {
-                peerConnection.setLocalDescription(offer);
-                socket.send(JSON.stringify({ type: "connect", target: targetId, offer: offer, from: myId }));
-            });
+        pendingFileChunks = [];
+        if (fileReception.receivedSize >= fileReception.metadata.size) {
+          let blob = new Blob(fileReception.chunks);
+          downloadFile(blob, fileReception.metadata.name);
+          fileReception = null;
         }
-
-        function acceptConnection() {
-            document.getElementById("connectionRequest").style.display = "none";
-
-            peerConnection = new RTCPeerConnection(config);
-            setupConnection(pendingFrom);
-
-            peerConnection.ondatachannel = event => {
-                dataChannel = event.channel;
-                setupDataChannel();
-            };
-
-            peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer));
-            peerConnection.createAnswer().then(answer => {
-                peerConnection.setLocalDescription(answer);
-                socket.send(JSON.stringify({ type: "answer", target: pendingFrom, answer: answer, from: myId }));
-            });
-        }
-
-        function setupConnection(targetId) {
-            peerConnection.onicecandidate = event => {
-                if (event.candidate) {
-                    socket.send(JSON.stringify({ type: "candidate", target: targetId, candidate: event.candidate, from: myId }));
-                }
-            };
-        }
-
-        function setupDataChannel() {
-            dataChannel.onopen = () => console.log("Canal de dados aberto!");
-            dataChannel.onmessage = event => {
-                if (event.data instanceof Blob) {
-                    // Quando o arquivo for recebido, inicia o download automaticamente
-                    downloadFile(event.data);
-                } else {
-                    let chat = document.getElementById("chat");
-                    let mensagem = document.createElement("p");
-                    mensagem.textContent = "Outro: " + event.data;
-                    chat.appendChild(mensagem);
-                }
-            };
-        }
-
-        function sendFile() {
-            let file = document.getElementById("fileInput").files[0];
-            if (!file) {
-                alert("Selecione um arquivo para enviar!");
-                return;
-            }
-
-            // Envia metadados do arquivo (nome e tamanho)
-            let metadata = { name: file.name, size: file.size };
-            socket.send(JSON.stringify({ type: "fileMetadata", target: targetId, from: myId, metadata: metadata }));
-
-            // Lê o arquivo e envia em partes
-            fileReader.onload = function(e) {
-                dataChannel.send(e.target.result);
-            };
-
-            let chunkSize = 16 * 1024; // 16 KB
-            let offset = 0;
-            while (offset < file.size) {
-                let slice = file.slice(offset, offset + chunkSize);
-                fileReader.readAsArrayBuffer(slice);
-                offset += chunkSize;
-            }
-        }
-
-        function receiveFile(metadata) {
-    	    console.log("Iniciando recebimento de arquivo:", metadata.name); // Log para verificar o nome do arquivo
-    let receivedChunks = [];
-    let receivedSize = 0;
-
-    dataChannel.onmessage = function(event) {
-        if (event.data instanceof Blob) {
-            receivedChunks.push(event.data);
-            receivedSize += event.data.size;
-
-            // Quando o arquivo completo for recebido, dispara o download
-            if (receivedSize === metadata.size) {
-                let blob = new Blob(receivedChunks);
-                downloadFile(blob, metadata.name); // Passar o nome do arquivo aqui
-            }
-        }
+      }
+      else if (data.type === "users") {
+        // Atualiza a lista de usuários conectados
+        let userListElement = document.getElementById("userList");
+        userListElement.innerHTML = "";
+        data.users.forEach(function(userId) {
+          let li = document.createElement("li");
+          li.textContent = userId;
+          userListElement.appendChild(li);
+        });
+      }
     };
-}
 
-function downloadFile(blob, fileName) {
-    console.log("Iniciando download do arquivo:", fileName); // Log para verificar o nome do arquivo
-    if (fileName) {  // Verifique se o nome foi realmente passado
-        let url = window.URL.createObjectURL(blob);
-        let a = document.createElement("a");
-        a.style.display = "none";
-        a.href = url;
-        a.download = fileName; // Usa o nome correto do arquivo recebido
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-    } else {
-        console.error("Nome do arquivo não foi definido.");
+    function changeId() {
+      let newId = document.getElementById("newId").value.trim();
+      if (!newId) {
+        alert("Por favor, digite um novo ID.");
+        return;
+      }
+      socket.send(JSON.stringify({
+        type: "changeId",
+        newId: newId,
+        from: myId
+      }));
     }
-}
 
+    function autoConnect() {
+      let targetId = document.getElementById("targetId").value;
+      if (!targetId) return;
+      if (peerConnection) return; 
+      connectToPeer();
+    }
 
-    </script>
+    function connectToPeer() {
+      let targetId = document.getElementById("targetId").value;
+      if (!targetId) {
+        alert("Digite um ID para conectar!");
+        return;
+      }
+      peerConnection = new RTCPeerConnection(config);
+      dataChannel = peerConnection.createDataChannel("fileTransfer");
+      setupDataChannel();
+      setupConnection(targetId);
+
+      peerConnection.createOffer().then(offer => {
+        return peerConnection.setLocalDescription(offer);
+      }).then(() => {
+        socket.send(JSON.stringify({
+          type: "connect",
+          target: targetId,
+          offer: peerConnection.localDescription,
+          from: myId
+        }));
+      }).catch(console.error);
+    }
+
+    function acceptConnection() {
+      if (peerConnection) return;
+      peerConnection = new RTCPeerConnection(config);
+      setupConnection(pendingFrom);
+
+      peerConnection.ondatachannel = event => {
+        dataChannel = event.channel;
+        setupDataChannel();
+      };
+
+      peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer));
+      peerConnection.createAnswer().then(answer => {
+        return peerConnection.setLocalDescription(answer);
+      }).then(() => {
+        socket.send(JSON.stringify({
+          type: "answer",
+          target: pendingFrom,
+          answer: peerConnection.localDescription,
+          from: myId
+        }));
+      }).catch(console.error);
+    }
+
+    function setupConnection(targetId) {
+      peerConnection.onicecandidate = event => {
+        if (event.candidate) {
+          socket.send(JSON.stringify({
+            type: "candidate",
+            target: targetId,
+            candidate: event.candidate,
+            from: myId
+          }));
+        }
+      };
+    }
+
+    function setupDataChannel() {
+      dataChannel.onopen = () => console.log("Canal de dados aberto!");
+      dataChannel.onmessage = event => {
+        if (event.data instanceof Blob) {
+          if (!fileReception) {
+            pendingFileChunks.push(event.data);
+          } else {
+            fileReception.chunks.push(event.data);
+            fileReception.receivedSize += event.data.size;
+            if (fileReception.receivedSize >= fileReception.metadata.size) {
+              let blob = new Blob(fileReception.chunks);
+              downloadFile(blob, fileReception.metadata.name);
+              fileReception = null;
+            }
+          }
+        } else {
+          let chat = document.getElementById("chat");
+          let mensagem = document.createElement("p");
+          mensagem.textContent = "Outro: " + event.data;
+          chat.appendChild(mensagem);
+        }
+      };
+    }
+
+    function sendFile() {
+      let file = document.getElementById("fileInput").files[0];
+      if (!file) {
+        alert("Selecione um arquivo para enviar!");
+        return;
+      }
+
+      let targetId = document.getElementById("targetId").value;
+      if (!targetId) {
+        alert("Digite o ID do destinatário!");
+        return;
+      }
+
+      if (!peerConnection) {
+        connectToPeer();
+      }
+
+      let metadata = { name: file.name, size: file.size };
+      socket.send(JSON.stringify({
+        type: "fileMetadata",
+        target: targetId,
+        from: myId,
+        metadata: metadata
+      }));
+
+      let chunkSize = 16 * 1024;
+      let offset = 0;
+
+      fileReader.onload = function(e) {
+        dataChannel.send(e.target.result);
+        offset += e.target.result.byteLength;
+        if (offset < file.size) {
+          readSlice(offset);
+        }
+      };
+
+      function readSlice(o) {
+        let slice = file.slice(o, o + chunkSize);
+        fileReader.readAsArrayBuffer(slice);
+      }
+      readSlice(0);
+    }
+
+    function downloadFile(blob, fileName = "received_file") {
+      let url = window.URL.createObjectURL(blob);
+      let a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+  </script>
+
+<script>
+    // Animação de fade para atualização do ID
+    const myIdElement = document.getElementById('myId');
+    const observer = new MutationObserver(() => {
+      myIdElement.classList.remove('fade');
+      // Força reflow para reiniciar a animação
+      void myIdElement.offsetWidth;
+      myIdElement.classList.add('fade');
+    });
+    observer.observe(myIdElement, { childList: true });
+
+    // Ao clicar em um item da lista, copia o ID para a área de transferência
+    const userList = document.getElementById('userList');
+    userList.addEventListener('click', function(event) {
+      if (event.target && event.target.nodeName === "LI") {
+        const idText = event.target.textContent;
+        navigator.clipboard.writeText(idText).then(() => {
+          // Efeito visual para confirmação
+          event.target.style.backgroundColor = '#a8e6cf';
+          setTimeout(() => {
+            event.target.style.backgroundColor = '';
+          }, 500);
+        });
+      }
+    });
+  </script>
 </body>
 </html>
