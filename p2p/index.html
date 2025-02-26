@@ -2,410 +2,325 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
+  <title>Compartilhamento P2P de Arquivos</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Transferência de Arquivo P2P</title>
-  <!-- Importando fonte Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
   <style>
-    /* Reset e configurações básicas */
+    /* Reset básico */
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
+    
     body {
-      font-family: 'Roboto', sans-serif;
-      background: #f4f4f9;
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
       color: #333;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-    .container {
-      flex: 1;
-      max-width: 800px;
-      margin: 20px auto;
-      background: #fff;
       padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    h1 {
-      text-align: center;
-      padding: 10px;
-      color: white;
-      background: #24a0ed;
-    }
-    p, label {
-      font-size: 1rem;
-    }
-    input[type="text"],
-    input[type="file"] {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      transition: border-color 0.3s;
-    }
-    input[type="text"]:focus,
-    input[type="file"]:focus {
-      border-color: #66afe9;
-      outline: none;
-    }
-    button {
-      padding: 10px 20px;
-      margin: 10px 0;
-      border: none;
-      border-radius: 4px;
-      background: #24a0ed;
-      color: #fff;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background 0.3s, transform 0.2s;
-    }
-    button:hover {
-      background: #4cae4c;
-    }
-    button:active {
-      transform: scale(0.98);
-    }
-    /* Seção de usuários conectados */
-    #userSection {
-      margin-top: 20px;
-      border-top: 1px solid #eee;
-      padding-top: 10px;
-    }
-    #userSection h3 {
-      margin-bottom: 10px;
-    }
-    #userList {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    #userList li {
-      background: #e7e7e7;
-      margin: 5px 0;
-      padding: 8px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background 0.3s, transform 0.3s;
-    }
-    #userList li:hover {
-      background: #d7d7d7;
-      transform: scale(1.02);
-    }
-    /* Animação para a mudança do ID */
-    #myId {
-      font-weight: bold;
-      display: inline-block;
-      transition: opacity 0.5s;
-    }
-    .fade {
-      opacity: 0;
-      animation: fadeIn 0.5s forwards;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    /* Rodapé */
-    footer {
-      background: #333;
-      color: #fff;
+    
+    h1, h2 {
       text-align: center;
       padding: 15px;
+      background: #24a0ed;
+      color: white;
     }
-    /* Responsividade */
-    @media (max-width: 600px) {
-      .container {
-        margin: 10px;
-        padding: 15px;
+    
+    /* Exibição do ID do usuário */
+    #userId {
+      text-align: center;
+      font-size: 1.2em;
+      margin: 20px 0;
+    }
+    
+    #userId .label {
+      font-weight: normal;
+    }
+    
+    #userId .value {
+      display: inline-block;
+      color: #007BFF;
+      font-weight: bold;
+      padding: 5px 10px;
+      border-radius: 5px;
+      transition: background-color 0.3s ease, transform 0.3s ease;
+    }
+    
+    /* Animação de atualização do ID */
+    #userId .value.updated {
+      background-color: #d4edda;
+      transform: scale(1.1);
+    }
+    
+    /* Container principal usando CSS Grid para reordenar os elementos */
+    #contentWrapper {
+      display: grid;
+      grid-gap: 20px;
+    }
+    
+    /* Em telas grandes: updateIdSection fica no topo, e os painéis em linha */
+    @media (min-width: 768px) {
+      #contentWrapper {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+          "update update"
+          "left right";
       }
-      button, input[type="text"], input[type="file"] {
-        font-size: 0.9rem;
+    }
+    
+    /* Em telas pequenas: ordem vertical: primeiro o formulário, depois o update e por fim a lista */
+    @media (max-width: 767px) {
+      #contentWrapper {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "left"
+          "update"
+          "right";
+      }
+    }
+    
+    /* Áreas definidas para os elementos dentro do grid */
+    #updateIdSection { 
+      grid-area: update;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    #leftPane { 
+      grid-area: left;
+    }
+    
+    #rightPane { 
+      grid-area: right;
+    }
+    
+    /* Formulário de envio */
+    form {
+      background: #fff;
+      padding: 15px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    
+    input[type="text"], input[type="file"] {
+      width: 95%;
+      padding: 8px;
+      margin: 0 10px 10px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    
+    button {
+      padding: 10px 20px;
+      background: #007BFF;
+      border: none;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    button:hover {
+      background: #0056b3;
+    }
+    
+    /* Lista de usuários conectados */
+    #usersList {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+    }
+    
+    #usersList p {
+      margin: 5px 0;
+      padding: 5px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: background-color 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+    }
+    
+    #usersList p:last-child {
+      border-bottom: none;
+    }
+    
+    #usersList p:hover {
+      background: #f9f9f9;
+    }
+    
+    /* Input do updateIdSection com tamanho fixo */
+    #updateIdSection input {
+      width: 300px;
+      height: 50px;
+    }
+    
+    /* Animação de cópia: escurecer o background e voltar à cor original */
+    @keyframes copyAnimation {
+      0% { background-color: #fff; }
+      50% { background-color: #ccc; }
+      100% { background-color: #fff; }
+    }
+    
+    /* Ajustes para telas pequenas: botão ocupando toda a largura, se necessário */
+    @media (max-width: 600px) {
+      button {
+        width: 100%;
       }
     }
   </style>
 </head>
 <body>
-   <h1>Transferência de Arquivo P2P</h1>
+  <h1>Compartilhamento P2P de Arquivos</h1>
 
-  <div class="container">
-    
-    <p>Seu ID: <span id="myId">Gerando...</span></p>
-    
-    <!-- Área para alterar o ID -->
-    <div>
-      <input type="text" id="newId" placeholder="Digite seu novo ID">
-      <button onclick="changeId()">Alterar ID</button>
+  <!-- Exibição do ID do usuário -->
+  <div id="userId">
+    <span class="label">Seu ID: </span>
+    <span class="value" id="userIdValue"></span>
+  </div>
+  
+  <!-- Container que organiza o formulário, campo de atualização e lista de usuários -->
+  <div id="contentWrapper">
+    <!-- Painel esquerdo: formulário de envio -->
+    <div id="leftPane">
+      <form id="fileForm">
+        <label for="destId">ID do destinatário:</label>
+        <input type="text" id="destId" required>
+        
+        <label for="fileInput">Selecione o arquivo:</label>
+        <input type="file" id="fileInput" required>
+        
+        <button type="submit">Enviar</button>
+      </form>
     </div>
     
-    <!-- Ao digitar o ID do destinatário, a conexão é iniciada automaticamente -->
-    <input type="text" id="targetId" placeholder="Digite o ID do outro cliente" onchange="autoConnect()">
+    <!-- Campo para atualizar o ID -->
+    <div id="updateIdSection">
+      <input type="text" id="newId" placeholder="Digite novo ID">
+      <button id="updateIdBtn">Atualizar ID</button>
+    </div>
     
-    <!-- Seleciona o arquivo e envia -->
-    <input type="file" id="fileInput" />
-    <button onclick="sendFile()">Enviar Arquivo</button>
-    
-    <!-- Lista de usuários conectados -->
-    <div id="userSection">
-      <h3>Usuários Conectados</h3>
-      <ul id="userList"></ul>
+    <!-- Painel direito: lista de usuários conectados -->
+    <div id="rightPane">
+      <h2>Usuários Conectados:</h2>
+      <div id="usersList"></div>
     </div>
   </div>
   
-  <footer>
-    <p>&copy; 2025 Transferência de Arquivo P2P. Todos os direitos reservados.</p>
-  </footer>
-
   <script>
-    let socket = new WebSocket("ws://localhost:12345");
-    let myId;
-    let peerConnection;
-    let dataChannel;
-    let pendingOffer, pendingFrom;
-    let fileReader = new FileReader();
-    let config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
-
-    // Variáveis para gerenciar a recepção do arquivo
-    let fileReception = null;
-    let pendingFileChunks = [];
-
-    socket.onmessage = function(event) {
-      let data = JSON.parse(event.data);
-
-      if (data.type === "id") {
+    // Conecta ao servidor WebSocket
+    const ws = new WebSocket('ws://localhost:8080');
+    let myId = null;
+  
+    ws.onopen = function() {
+      console.log('Conectado ao servidor de sockets');
+    };
+  
+    ws.onmessage = function(event) {
+      const data = JSON.parse(event.data);
+      if (data.type === 'id') {
+        // Exibe o ID atribuído pelo servidor com animação
         myId = data.id;
-        document.getElementById("myId").innerText = myId;
-      } 
-      else if (data.type === "idChanged") {
-        myId = data.newId;
-        document.getElementById("myId").innerText = myId;
-        alert("ID alterado para: " + myId);
-      }
-      else if (data.type === "error") {
-        alert("Erro: " + data.message);
-      }
-      else if (data.type === "offer") {
-        pendingOffer = data.offer;
-        pendingFrom = data.from;
-        acceptConnection();
-      } 
-      else if (data.type === "answer") {
-        peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-      } 
-      else if (data.type === "candidate") {
-        peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-      }
-      else if (data.type === "fileMetadata") {
-        fileReception = {
-          metadata: data.metadata,
-          chunks: pendingFileChunks.slice(),
-          receivedSize: pendingFileChunks.reduce((total, blob) => total + blob.size, 0)
-        };
-        pendingFileChunks = [];
-        if (fileReception.receivedSize >= fileReception.metadata.size) {
-          let blob = new Blob(fileReception.chunks);
-          downloadFile(blob, fileReception.metadata.name);
-          fileReception = null;
-        }
-      }
-      else if (data.type === "users") {
-        // Atualiza a lista de usuários conectados
-        let userListElement = document.getElementById("userList");
-        userListElement.innerHTML = "";
-        data.users.forEach(function(userId) {
-          let li = document.createElement("li");
-          li.textContent = userId;
-          userListElement.appendChild(li);
+        const valueEl = document.getElementById('userIdValue');
+        valueEl.textContent = myId;
+        valueEl.classList.add('updated');
+        setTimeout(() => valueEl.classList.remove('updated'), 300);
+      } else if (data.type === 'update') {
+        // Atualiza o ID exibido após alteração com animação
+        myId = data.id;
+        const valueEl = document.getElementById('userIdValue');
+        valueEl.textContent = myId;
+        valueEl.classList.add('updated');
+        setTimeout(() => valueEl.classList.remove('updated'), 300);
+        alert(data.message);
+      } else if (data.type === 'usersList') {
+        // Atualiza a lista de usuários conectados com transição suave
+        const usersDiv = document.getElementById('usersList');
+        usersDiv.innerHTML = '';
+        data.users.forEach(function(user) {
+          const p = document.createElement('p');
+          p.textContent = user;
+          // Evento para copiar o ID ao clicar
+          p.addEventListener('click', function() {
+            navigator.clipboard.writeText(user).then(() => {
+              // Aplica animação de cópia: escurece o background e volta à cor original
+              p.style.animation = 'copyAnimation 0.5s ease';
+              setTimeout(() => { p.style.animation = ''; }, 500);
+            }).catch(err => {
+              console.error('Erro ao copiar ID: ', err);
+            });
+          });
+          // Aplica transição de entrada
+          p.style.opacity = 0;
+          p.style.transform = "translateY(-10px)";
+          setTimeout(() => {
+            p.style.opacity = 1;
+            p.style.transform = "translateY(0)";
+          }, 10);
+          usersDiv.appendChild(p);
         });
+      } else if (data.type === 'file') {
+        // Ao receber um arquivo, inicia o download automático
+        const a = document.createElement('a');
+        a.href = 'data:application/octet-stream;base64,' + data.fileData;
+        a.download = data.fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else if (data.type === 'error') {
+        alert(data.message);
       }
     };
-
-    function changeId() {
-      let newId = document.getElementById("newId").value.trim();
-      if (!newId) {
-        alert("Por favor, digite um novo ID.");
-        return;
-      }
-      socket.send(JSON.stringify({
-        type: "changeId",
-        newId: newId,
-        from: myId
-      }));
-    }
-
-    function autoConnect() {
-      let targetId = document.getElementById("targetId").value;
-      if (!targetId) return;
-      if (peerConnection) return; 
-      connectToPeer();
-    }
-
-    function connectToPeer() {
-      let targetId = document.getElementById("targetId").value;
-      if (!targetId) {
-        alert("Digite um ID para conectar!");
-        return;
-      }
-      peerConnection = new RTCPeerConnection(config);
-      dataChannel = peerConnection.createDataChannel("fileTransfer");
-      setupDataChannel();
-      setupConnection(targetId);
-
-      peerConnection.createOffer().then(offer => {
-        return peerConnection.setLocalDescription(offer);
-      }).then(() => {
-        socket.send(JSON.stringify({
-          type: "connect",
-          target: targetId,
-          offer: peerConnection.localDescription,
-          from: myId
-        }));
-      }).catch(console.error);
-    }
-
-    function acceptConnection() {
-      if (peerConnection) return;
-      peerConnection = new RTCPeerConnection(config);
-      setupConnection(pendingFrom);
-
-      peerConnection.ondatachannel = event => {
-        dataChannel = event.channel;
-        setupDataChannel();
-      };
-
-      peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer));
-      peerConnection.createAnswer().then(answer => {
-        return peerConnection.setLocalDescription(answer);
-      }).then(() => {
-        socket.send(JSON.stringify({
-          type: "answer",
-          target: pendingFrom,
-          answer: peerConnection.localDescription,
-          from: myId
-        }));
-      }).catch(console.error);
-    }
-
-    function setupConnection(targetId) {
-      peerConnection.onicecandidate = event => {
-        if (event.candidate) {
-          socket.send(JSON.stringify({
-            type: "candidate",
-            target: targetId,
-            candidate: event.candidate,
-            from: myId
-          }));
-        }
-      };
-    }
-
-    function setupDataChannel() {
-      dataChannel.onopen = () => console.log("Canal de dados aberto!");
-      dataChannel.onmessage = event => {
-        if (event.data instanceof Blob) {
-          if (!fileReception) {
-            pendingFileChunks.push(event.data);
-          } else {
-            fileReception.chunks.push(event.data);
-            fileReception.receivedSize += event.data.size;
-            if (fileReception.receivedSize >= fileReception.metadata.size) {
-              let blob = new Blob(fileReception.chunks);
-              downloadFile(blob, fileReception.metadata.name);
-              fileReception = null;
-            }
-          }
-        } else {
-          let chat = document.getElementById("chat");
-          let mensagem = document.createElement("p");
-          mensagem.textContent = "Outro: " + event.data;
-          chat.appendChild(mensagem);
-        }
-      };
-    }
-
-    function sendFile() {
-      let file = document.getElementById("fileInput").files[0];
+  
+    // Lida com o envio do arquivo
+    document.getElementById('fileForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const destId = document.getElementById('destId').value;
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
       if (!file) {
-        alert("Selecione um arquivo para enviar!");
+        alert('Selecione um arquivo.');
         return;
       }
-
-      let targetId = document.getElementById("targetId").value;
-      if (!targetId) {
-        alert("Digite o ID do destinatário!");
-        return;
-      }
-
-      if (!peerConnection) {
-        connectToPeer();
-      }
-
-      let metadata = { name: file.name, size: file.size };
-      socket.send(JSON.stringify({
-        type: "fileMetadata",
-        target: targetId,
-        from: myId,
-        metadata: metadata
-      }));
-
-      let chunkSize = 16 * 1024;
-      let offset = 0;
-
-      fileReader.onload = function(e) {
-        dataChannel.send(e.target.result);
-        offset += e.target.result.byteLength;
-        if (offset < file.size) {
-          readSlice(offset);
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        // Converte o arquivo para base64
+        const bytes = new Uint8Array(evt.target.result);
+        let binaryString = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binaryString += String.fromCharCode(bytes[i]);
         }
+        const base64Data = btoa(binaryString);
+        // Prepara a mensagem com os dados do arquivo
+        const payload = {
+          to: destId,
+          fileName: file.name,
+          fileData: base64Data
+        };
+        ws.send(JSON.stringify(payload));
       };
-
-      function readSlice(o) {
-        let slice = file.slice(o, o + chunkSize);
-        fileReader.readAsArrayBuffer(slice);
-      }
-      readSlice(0);
-    }
-
-    function downloadFile(blob, fileName = "received_file") {
-      let url = window.URL.createObjectURL(blob);
-      let a = document.createElement("a");
-      a.style.display = "none";
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-    }
-  </script>
-
-<script>
-    // Animação de fade para atualização do ID
-    const myIdElement = document.getElementById('myId');
-    const observer = new MutationObserver(() => {
-      myIdElement.classList.remove('fade');
-      // Força reflow para reiniciar a animação
-      void myIdElement.offsetWidth;
-      myIdElement.classList.add('fade');
+      reader.readAsArrayBuffer(file);
     });
-    observer.observe(myIdElement, { childList: true });
-
-    // Ao clicar em um item da lista, copia o ID para a área de transferência
-    const userList = document.getElementById('userList');
-    userList.addEventListener('click', function(event) {
-      if (event.target && event.target.nodeName === "LI") {
-        const idText = event.target.textContent;
-        navigator.clipboard.writeText(idText).then(() => {
-          // Efeito visual para confirmação
-          event.target.style.backgroundColor = '#a8e6cf';
-          setTimeout(() => {
-            event.target.style.backgroundColor = '';
-          }, 500);
-        });
+  
+    // Lida com a atualização do ID
+    document.getElementById('updateIdBtn').addEventListener('click', function() {
+      const newId = document.getElementById('newId').value;
+      if(newId.trim() === "") {
+        alert('Digite um novo ID válido.');
+        return;
       }
+      const updatePayload = {
+        type: 'updateID',
+        newId: newId
+      };
+      ws.send(JSON.stringify(updatePayload));
     });
   </script>
 </body>
