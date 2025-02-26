@@ -1,107 +1,100 @@
 <?php
-require 'vendor/autoload.php';
+require __DIR__ . '/vendor/autoload.php';
 
 use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
 use Ratchet\Server\IoServer;
-use Ratchet\WebSocket\WsServer;
 use Ratchet\Http\HttpServer;
+use Ratchet\WebSocket\WsServer;
 
-class SignalingServer implements MessageComponentInterface {
-    private $clients = [];
+class P2PFileServer implements MessageComponentInterface {
+    protected $clients;
+    protected $userIDs;           // Mapeia resourceId para ID do usuário
+    protected $userConnections;   // Mapeia ID do usuário para a conexão
+
+    public function __construct() {
+        $this->clients = new \SplObjectStorage;
+        $this->userIDs = [];
+        $this->userConnections = [];
+    }
+    
+    // Envia para todos os clientes a lista de usuários conectados
+    private function broadcastUserList() {
+        $list = array_keys($this->userConnections);
+        foreach ($this->clients as $client) {
+            $client->send(json_encode(['type' => 'usersList', 'users' => $list]));
+        }
+    }
 
     public function onOpen(ConnectionInterface $conn) {
-        // Gera um ID único para cada cliente ao conectar
-        $id = uniqid();
-        $this->clients[$id] = $conn;
-        $conn->send(json_encode(["type" => "id", "id" => $id]));
-        echo "Novo cliente conectado com ID: $id\n";
+        // Adiciona a nova conexão
+        $this->clients->attach($conn);
+        // Gera um ID único para o usuário (pode ser aprimorado conforme a necessidade)
+        $userId = uniqid();
+        $this->userIDs[$conn->resourceId] = $userId;
+        $this->userConnections[$userId] = $conn;
+        // Envia o ID para o usuário
+        $conn->send(json_encode(['type' => 'id', 'id' => $userId]));
+        echo "Novo usuário conectado: {$userId}\n";
+        // Atualiza a lista de usuários para todos
         $this->broadcastUserList();
     }
 
     public function onMessage(ConnectionInterface $from, $msg) {
         $data = json_decode($msg, true);
-        
-        // Alteração de ID
-        if (isset($data["type"]) && $data["type"] == "changeId") {
-            $newId = trim($data["newId"]);
-            if (isset($this->clients[$newId])) {
-                $from->send(json_encode([
-                    "type" => "error",
-                    "message" => "ID '$newId' já está em uso."
-                ]));
-                return;
-            } else {
-                $oldId = null;
-                foreach ($this->clients as $id => $client) {
-                    if ($client === $from) {
-                        $oldId = $id;
-                        break;
-                    }
+        if (!$data) return;
+
+        // Tratamento para atualização do ID do usuário
+        if (isset($data['type']) && $data['type'] === 'updateID') {
+            if (isset($data['newId'])) {
+                $oldId = $this->userIDs[$from->resourceId];
+                $newId = $data['newId'];
+                // Verifica se o novo ID já está em uso
+                if (isset($this->userConnections[$newId])) {
+                    $from->send(json_encode(['type' => 'error', 'message' => 'ID já em uso.']));
+                } else {
+                    // Atualiza o mapeamento
+                    unset($this->userConnections[$oldId]);
+                    $this->userIDs[$from->resourceId] = $newId;
+                    $this->userConnections[$newId] = $from;
+                    $from->send(json_encode(['type' => 'update', 'message' => 'ID atualizado com sucesso!', 'id' => $newId]));
+                    echo "Usuário {$oldId} atualizou seu ID para {$newId}\n";
+                    // Atualiza a lista de usuários para todos
+                    $this->broadcastUserList();
                 }
-                if ($oldId !== null) {
-                    unset($this->clients[$oldId]);
-                }
-                $this->clients[$newId] = $from;
-                $from->send(json_encode([
-                    "type" => "idChanged",
-                    "newId" => $newId
-                ]));
-                echo "Cliente com ID $oldId alterou para $newId\n";
-                $this->broadcastUserList();
-                return;
             }
-        }
-        
-        // Encaminha a oferta de conexão
-        if (isset($data["type"]) && $data["type"] == "connect" && isset($this->clients[$data["target"]])) {
-            $target = $this->clients[$data["target"]];
-            $target->send(json_encode([
-                "type"  => "offer", 
-                "offer" => $data["offer"], 
-                "from"  => $data["from"]
-            ]));
+            return;
         }
 
-        // Encaminha a resposta da conexão
-        if (isset($data["type"]) && $data["type"] == "answer" && isset($this->clients[$data["target"]])) {
-            $target = $this->clients[$data["target"]];
-            $target->send(json_encode([
-                "type"   => "answer", 
-                "answer" => $data["answer"], 
-                "from"   => $data["from"]
-            ]));
-        }
-
-        // Encaminha os candidatos ICE
-        if (isset($data["type"]) && $data["type"] == "candidate" && isset($this->clients[$data["target"]])) {
-            $target = $this->clients[$data["target"]];
-            $target->send(json_encode([
-                "type"      => "candidate", 
-                "candidate" => $data["candidate"], 
-                "from"      => $data["from"]
-            ]));
-        }
-
-        // Encaminha os metadados do arquivo
-        if (isset($data["type"]) && $data["type"] == "fileMetadata" && isset($this->clients[$data["target"]])) {
-            $target = $this->clients[$data["target"]];
-            $target->send(json_encode([
-                "type"     => "fileMetadata", 
-                "metadata" => $data["metadata"], 
-                "from"     => $data["from"]
-            ]));
+        // Processamento para envio de arquivo: espera receber { to, fileName, fileData }
+        if (isset($data['to'], $data['fileName'], $data['fileData'])) {
+            $to = $data['to'];
+            if (isset($this->userConnections[$to])) {
+                $destConn = $this->userConnections[$to];
+                $senderId = $this->userIDs[$from->resourceId];
+                $payload = [
+                    'type' => 'file',
+                    'from' => $senderId,
+                    'fileName' => $data['fileName'],
+                    'fileData' => $data['fileData']
+                ];
+                $destConn->send(json_encode($payload));
+                echo "Arquivo '{$data['fileName']}' enviado de {$senderId} para {$to}\n";
+            } else {
+                // Informa o remetente que o destinatário não foi encontrado
+                $from->send(json_encode(['type' => 'error', 'message' => 'Destinatário não encontrado.']));
+            }
         }
     }
 
     public function onClose(ConnectionInterface $conn) {
-        foreach ($this->clients as $id => $client) {
-            if ($client === $conn) {
-                unset($this->clients[$id]);
-                echo "Cliente desconectado: $id\n";
-                break;
-            }
-        }
+        // Remove a conexão e o mapeamento de usuário
+        $this->clients->detach($conn);
+        $userId = $this->userIDs[$conn->resourceId];
+        unset($this->userIDs[$conn->resourceId]);
+        unset($this->userConnections[$userId]);
+        echo "Usuário desconectado: {$userId}\n";
+        // Atualiza a lista de usuários para todos
         $this->broadcastUserList();
     }
 
@@ -109,24 +102,17 @@ class SignalingServer implements MessageComponentInterface {
         echo "Erro: " . $e->getMessage() . "\n";
         $conn->close();
     }
-    
-    private function broadcastUserList() {
-        $userList = array_keys($this->clients);
-        foreach ($this->clients as $client) {
-            $client->send(json_encode([
-                "type"  => "users",
-                "users" => $userList
-            ]));
-        }
-    }
 }
 
+// Inicia o servidor WebSocket na porta 8080
 $server = IoServer::factory(
     new HttpServer(
-        new WsServer(new SignalingServer())
+        new WsServer(
+            new P2PFileServer()
+        )
     ),
-    12345
+    8080
 );
 
-echo "Servidor WebSocket rodando na porta 12345...\n";
+echo "Servidor iniciado na porta 8080...\n";
 $server->run();
