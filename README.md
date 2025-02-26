@@ -1,6 +1,6 @@
-# Comunicação P2P com WebRTC e WebSocket
+# Comunicação P2P com WebSocket
 
-Este projeto implementa um sistema de chat peer-to-peer (P2P) utilizando **WebRTC** para a comunicação direta entre navegadores e **WebSocket** para a sinalização. A ideia é que dois usuários possam se conectar diretamente, trocando arquivos sem que o tráfego precise passar continuamente pelo servidor, o que reduz a latência e aumenta a privacidade.
+Este projeto implementa um sistema de compartilhamento de arquivos usando **WebSocket** para a sinalização dos usuários e transmição de dados. A ideia é que dois usuários possam se conectar através do servidor, trocando arquivos entre si.
 
 ---
 
@@ -35,7 +35,7 @@ Este projeto implementa um sistema de chat peer-to-peer (P2P) utilizando **WebRT
      ```
    - Se aparecer a versão do Git, então ele foi instalado corretamente.
 
-3. **Ativar a extensão `zip` do PHP** *(necessário para o Composer funcionar corretamente)*:
+3. **Ativar a extensão `zip` do PHP se for usar o xampp** *(necessário para o Composer funcionar corretamente no xampp, mas não é necessário o xampp)*:
    - Abra o arquivo `php.ini` do XAMPP (geralmente localizado em `C:\xampp\php\php.ini`).
    - Procure pela linha:
      ```ini
@@ -134,7 +134,7 @@ dentro da pasta p2p abra o terminal
 
 ## 🏗 Tecnologias Utilizadas
 
-- **Frontend:** HTML, JavaScript, WebRTC
+- **Frontend:** HTML, JavaScript
 - **Backend:** PHP, Ratchet (para WebSocket)
 - **Ferramentas Auxiliares:**
   - [Composer](https://getcomposer.org/) para gerenciamento de dependências PHP.
@@ -145,4 +145,4 @@ dentro da pasta p2p abra o terminal
 
 - PHP **8.1** ou superior
 - Composer
-- Navegador moderno (Chrome, Firefox, Edge, etc.) com suporte a **WebRTC** e **WebSocket**
+- Navegador moderno (Chrome, Firefox, Edge, etc.) com suporte a **WebSocket**
